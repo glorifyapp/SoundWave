@@ -17,10 +17,14 @@ public final class Chronometer: NSObject {
 	public var timerDidUpdate: ((TimeInterval) -> ())?
 	public var timerDidComplete: (() -> ())?
 
-	public init(withTimeInterval timeInterval: TimeInterval = 0.0) {
+    public init(withTimeInterval timeInterval: TimeInterval = 0.0, timerCurrentValue: TimeInterval?) {
+
 		super.init()
 
 		self.timeInterval = timeInterval
+        if let timerCurrentValue = timerCurrentValue {
+            self.timerCurrentValue = timerCurrentValue
+        }
 	}
 
 	public func start(shouldFire fire: Bool = true) {

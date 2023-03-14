@@ -125,41 +125,41 @@ public class AudioVisualizationView: BaseNibView {
 		self.setNeedsDisplay()
 	}
 
-	public func scaleSoundDataToFitScreen() -> [Float] {
-		if self.meteringLevelsArray.isEmpty {
-			return []
-		}
+    public func scaleSoundDataToFitScreen() -> [Float] {
+        let meteringLevels = meteringLevelsArray.isEmpty ? (self.meteringLevels ?? []) : meteringLevelsArray
+        guard !meteringLevels.isEmpty else { return [] }
 
-		self.meteringLevelsClusteredArray.removeAll()
-		var lastPosition: Int = 0
+        self.meteringLevelsClusteredArray.removeAll()
+        var lastPosition: Int = 0
 
-		for index in 0..<self.maximumNumberBars {
-			let position: Float = Float(index) / Float(self.maximumNumberBars) * Float(self.meteringLevelsArray.count)
-			var h: Float = 0.0
+        for index in 0..<self.maximumNumberBars {
+            let position: Float = Float(index) / Float(self.maximumNumberBars) * Float(meteringLevels.count)
+            var h: Float = 0.0
 
-			if self.maximumNumberBars > self.meteringLevelsArray.count && floor(position) != position {
-				let low: Int = Int(floor(position))
-				let high: Int = Int(ceil(position))
+            if self.maximumNumberBars > meteringLevels.count && floor(position) != position {
+                let low: Int = Int(floor(position))
+                let high: Int = Int(ceil(position))
 
-				if high < self.meteringLevelsArray.count {
-					h = self.meteringLevelsArray[low] + ((position - Float(low)) * (self.meteringLevelsArray[high] - self.meteringLevelsArray[low]))
-				} else {
-					h = self.meteringLevelsArray[low]
-				}
-			} else {
-				for nestedIndex in lastPosition...Int(position) {
-					h += self.meteringLevelsArray[nestedIndex]
-				}
-				let stepsNumber = Int(1 + position - Float(lastPosition))
-				h = h / Float(stepsNumber)
-			}
+                if high < meteringLevels.count {
+                    h = meteringLevels[low] + ((position - Float(low)) * (meteringLevels[high] - meteringLevels[low]))
+                } else {
+                    h = meteringLevels[low]
+                }
+            } else {
+                for nestedIndex in lastPosition...Int(position) {
+                    h += meteringLevels[nestedIndex]
+                }
+                let stepsNumber = Int(1 + position - Float(lastPosition))
+                h = h / Float(stepsNumber)
+            }
 
-			lastPosition = Int(position)
-			self.meteringLevelsClusteredArray.append(h)
-		}
-		self.setNeedsDisplay()
-		return self.meteringLevelsClusteredArray
-	}
+            lastPosition = Int(position)
+            self.meteringLevelsClusteredArray.append(h)
+        }
+        self.setNeedsDisplay()
+        return self.meteringLevelsClusteredArray
+    }
+
 
 	// PRAGMA: - Play Mode Handling
 
@@ -177,7 +177,7 @@ public class AudioVisualizationView: BaseNibView {
 		}
 	}
 
-	public func play(for duration: TimeInterval) {
+    public func play(for duration: TimeInterval, startTime: TimeInterval? = nil) {
 		guard self.audioVisualizationMode == .read else {
 			fatalError("trying to read audio visualization in write mode")
 		}
@@ -191,7 +191,7 @@ public class AudioVisualizationView: BaseNibView {
 			return
 		}
 
-		self.playChronometer = Chronometer(withTimeInterval: self.audioVisualizationTimeInterval)
+        self.playChronometer = Chronometer(withTimeInterval: self.audioVisualizationTimeInterval, timerCurrentValue: startTime)
 		self.playChronometer?.start(shouldFire: false)
 
 		self.playChronometer?.timerDidUpdate = { [weak self] timerDuration in
@@ -211,7 +211,8 @@ public class AudioVisualizationView: BaseNibView {
 
 	public func pause() {
 		guard let chronometer = self.playChronometer, chronometer.isPlaying else {
-			fatalError("trying to pause audio visualization view when not playing")
+//			fatalError("trying to pause audio visualization view when not playing")
+            return
 		}
 		self.playChronometer?.pause()
 	}
@@ -220,9 +221,8 @@ public class AudioVisualizationView: BaseNibView {
 		self.playChronometer?.stop()
 		self.playChronometer = nil
 
-		self.currentGradientPercentage = 1.0
+        self.currentGradientPercentage = meteringLevels?.isEmpty == false ? 0.0 : nil
 		self.setNeedsDisplay()
-		self.currentGradientPercentage = nil
 	}
 
 	// MARK: - Mask + Gradient
@@ -267,7 +267,7 @@ public class AudioVisualizationView: BaseNibView {
 
 		let colorSpace = CGColorSpaceCreateDeviceRGB()
 		let colorLocations: [CGFloat] = [0.0, 1.0]
-		let colors = [self.gradientStartColor.cgColor, self.gradientEndColor.cgColor]
+        let colors = [self.gradientEndColor.cgColor, self.gradientEndColor.cgColor]
 
 		let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: colorLocations)
 
